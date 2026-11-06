@@ -35,6 +35,11 @@ output "database_secret_arn" {
   sensitive = true
 }
 
+output "jwt_secret_arn" {
+  value     = aws_secretsmanager_secret.jwt.arn
+  sensitive = true
+}
+
 output "database_endpoint" {
   value = aws_db_instance.main.address
 }
