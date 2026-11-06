@@ -1,43 +1,141 @@
-stages: [validate, image, gitops]
-variables:
-  AWS_DEFAULT_REGION: ${AWS_REGION}
-  IMAGE_TAG: $CI_COMMIT_SHA
-  DOCKER_TLS_CERTDIR: "/certs"
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes:
+        - api/**/*
+        - web/**/*
+        - infra/**/*
+        - deploy/helm/**/*
+        - .gitlab-ci.yml
+    - when: never
 
-api-check:
+stages:
+  - validate
+  - container-build
+  - publish
+  - promote
+
+default:
+  interruptible: true
+
+api-test:
   stage: validate
   image: node:22-alpine
   script:
-    - cd api && npm install --no-audit --no-fund && npm test && npm run check
+    - cd api
+    - npm install --no-audit --no-fund
+    - npm test
+    - npm run check
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: [api/**/*, .gitlab-ci.yml]
 
 web-build:
   stage: validate
   image: node:22-alpine
   script:
-    - cd web && npm install --no-audit --no-fund && npm run build
+    - cd web
+    - npm install --no-audit --no-fund
+    - npm run build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: [web/**/*, .gitlab-ci.yml]
 
-# Configure GitLab OIDC -> AWS role trust. Never store static AWS keys.
-ecr-publish:
-  stage: image
+terraform-validate:
+  stage: validate
+  image: hashicorp/terraform:1.10.5
+  script:
+    - cd infra/terraform
+    - terraform fmt -check -recursive
+    - terraform init -backend=false
+    - terraform validate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: [infra/**/*, .gitlab-ci.yml]
+
+helm-validate:
+  stage: validate
+  image: alpine/helm:3.17.1
+  script:
+    - helm lint deploy/helm/showcaseme
+    - helm template showcaseme deploy/helm/showcaseme --namespace showcaseme -f deploy/helm/showcaseme/values-aws.yaml
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: [deploy/helm/**/*, .gitlab-ci.yml]
+
+container-build:
+  stage: container-build
   image: docker:27-cli
-  services: ["docker:27-dind"]
+  services:
+    - name: docker:27-dind
+      command: ["--tls=true"]
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: /certs
+  script:
+    - docker build -t showcaseme-api:test ./api
+    - docker build -t showcaseme-web:test ./web
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: [api/**/*, web/**/*, .gitlab-ci.yml]
+
+# Create a GitLab OIDC id_token in the audience configured in Terraform.
+# Configure AWS_ROLE_ARN, AWS_REGION and a masked GITOPS_PUSH_TOKEN in GitLab CI/CD variables.
+ecr-publish:
+  stage: publish
+  image: docker:27-cli
+  services:
+    - name: docker:27-dind
+      command: ["--tls=true"]
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: /certs
   id_tokens:
     AWS_ID_TOKEN:
       aud: sts.amazonaws.com
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
   script:
     - apk add --no-cache aws-cli
-    - test -n "$AWS_ROLE_ARN" && test -n "$AWS_ACCOUNT_ID" && test -n "$AWS_REGION"
-    - export AWS_WEB_IDENTITY_TOKEN_FILE="$CI_PROJECT_DIR/.aws-token"
-    - echo "$AWS_ID_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
-    - export AWS_ROLE_SESSION_NAME="gitlab-$CI_PIPELINE_ID"
-    - aws sts assume-role-with-web-identity --role-arn "$AWS_ROLE_ARN" --role-session-name "$AWS_ROLE_SESSION_NAME" --web-identity-token "$AWS_ID_TOKEN" --duration-seconds 3600 > /tmp/creds.json
-    - export AWS_ACCESS_KEY_ID=$(aws --query Credentials.AccessKeyId --output text --cli-input-json file:///tmp/creds.json)
-    - export AWS_SECRET_ACCESS_KEY=$(aws --query Credentials.SecretAccessKey --output text --cli-input-json file:///tmp/creds.json)
-    - export AWS_SESSION_TOKEN=$(aws --query Credentials.SessionToken --output text --cli-input-json file:///tmp/creds.json)
-    - aws ecr get-login-password | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-    - docker build -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-api:$IMAGE_TAG" ./api
-    - docker build -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-web:$IMAGE_TAG" ./web
-    - docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-api:$IMAGE_TAG"
-    - docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-web:$IMAGE_TAG"
+    - test -n "$AWS_ROLE_ARN" && test -n "$AWS_REGION"
+    - mkdir -p "$CI_PROJECT_DIR/.aws"
+    - printf '%s' "$AWS_ID_TOKEN" > "$CI_PROJECT_DIR/.aws/web-identity-token"
+    - export AWS_WEB_IDENTITY_TOKEN_FILE="$CI_PROJECT_DIR/.aws/web-identity-token"
+    - export AWS_ROLE_SESSION_NAME="showcaseme-gitlab-$CI_PIPELINE_ID"
+    - aws sts get-caller-identity
+    - export AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+    - export ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+    - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+    - docker build -t "$ECR_REGISTRY/showcaseme-api:sha-$CI_COMMIT_SHA" ./api
+    - docker build -t "$ECR_REGISTRY/showcaseme-web:sha-$CI_COMMIT_SHA" ./web
+    - docker push "$ECR_REGISTRY/showcaseme-api:sha-$CI_COMMIT_SHA"
+    - docker push "$ECR_REGISTRY/showcaseme-web:sha-$CI_COMMIT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: [api/**/*, web/**/*, .gitlab-ci.yml]
+
+gitops-promote:
+  stage: promote
+  image: alpine:3.21
+  needs: ["ecr-publish"]
+  before_script:
+    - apk add --no-cache git
+  script:
+    - test -n "$GITOPS_PUSH_TOKEN"
+    - git config user.name "ShowcaseMe GitLab CI"
+    - git config user.email "showcaseme-ci@example.invalid"
+    - git remote set-url origin "https://oauth2:$GITOPS_PUSH_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
+    - git fetch origin "$CI_DEFAULT_BRANCH"
+    - git checkout -B gitops-promotion FETCH_HEAD
+    - sed -i -E "s|(^[[:space:]]+tag: ).*|\1sha-$CI_COMMIT_SHA|" deploy/helm/showcaseme/values-aws.yaml
+    - git add deploy/helm/showcaseme/values-aws.yaml
+    - git diff --cached --quiet && exit 0
+    - git commit -m "chore(gitops): promote sha-$CI_COMMIT_SHA"
+    - git push origin HEAD:"$CI_DEFAULT_BRANCH"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $GITOPS_PUSH_TOKEN'
+      changes: [api/**/*, web/**/*, .gitlab-ci.yml]
