@@ -16,7 +16,26 @@ concurrency:
 jobs:
   api:
     runs-on: ubuntu-latest
-    steps:
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: showcaseme
+          POSTGRES_USER: showcaseme
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U showcaseme -d showcaseme"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://showcaseme:ci-only-password@localhost:5432/showcaseme
+      JWT_SECRET: ci-only-jwt-secret-with-more-than-32-bytes-123456789
+      PGSSLMODE: disable
+      AWS_REGION: ap-south-1
+      S3_BUCKET: ""
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -29,6 +48,60 @@ jobs:
       - name: Test and syntax checks
         working-directory: api
         run: npm test && npm run check
+      - name: Exercise portfolio lifecycle with PostgreSQL
+        working-directory: api
+        run: |
+          set -euo pipefail
+          node src/server.js >/tmp/showcaseme-api.log 2>&1 &
+          API_PID=$!
+          cleanup() {
+            kill "$API_PID" 2>/dev/null || true
+            wait "$API_PID" 2>/dev/null || true
+            if [ -s /tmp/showcaseme-api.log ]; then cat /tmp/showcaseme-api.log; fi
+          }
+          trap cleanup EXIT
+          READY=0
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://localhost:8081/ready >/dev/null; then READY=1; break; fi
+            sleep 2
+          done
+          test "$READY" = "1"
+          EMAIL="ci-$GITHUB_RUN_ID@example.com"
+          PASSWORD="CI-Test-Password-123!"
+          REGISTER="$(jq -n --arg email "$EMAIL" --arg password "$PASSWORD" '{email:$email,password:$password}')"
+          AUTH="$(curl -fsS -X POST http://localhost:8081/api/auth/register -H 'Content-Type: application/json' -d "$REGISTER")"
+          TOKEN="$(printf '%s' "$AUTH" | jq -r .accessToken)"
+          test -n "$TOKEN"
+          SLUG="ci-$GITHUB_RUN_ID"
+          PORTFOLIO="$(jq -n --arg slug "$SLUG" '{
+            slug:$slug,
+            displayName:"CI Test Portfolio",
+            headline:"Cloud Platform Engineer",
+            bio:"Automated integration test portfolio.",
+            profession:"Cloud Engineering",
+            experience:[{role:"Engineer",organization:"CI",period:"2026",description:"Platform validation"}],
+            skills:["AWS","Kubernetes","Terraform"],
+            projects:[{title:"AWS EKS",description:"Helm and Argo CD delivery",url:"https://example.com"}],
+            templateKey:"minimal"
+          }')"
+          curl -fsS -X POST http://localhost:8081/api/portfolios \
+            -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$PORTFOLIO" | jq -e --arg slug "$SLUG" '.slug == $slug' >/dev/null
+          curl -fsS -X PUT "http://localhost:8081/api/portfolios/$SLUG" \
+            -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+            -d "$PORTFOLIO" | jq -e '.displayName == "CI Test Portfolio"' >/dev/null
+          curl -fsS -X POST "http://localhost:8081/api/portfolios/$SLUG/publish" \
+            -H "Authorization: Bearer $TOKEN" | jq -e '.published == true' >/dev/null
+          curl -fsS "http://localhost:8081/api/public/$SLUG" | jq -e '.published == true' >/dev/null
+          curl -fsS -X POST "http://localhost:8081/api/portfolios/$SLUG/unpublish" \
+            -H "Authorization: Bearer $TOKEN" | jq -e '.published == false' >/dev/null
+          STATUS="$(curl -sS -o /dev/null -w '%{http_code}' "http://localhost:8081/api/public/$SLUG")"
+          test "$STATUS" = "404"
+          curl -fsS -X DELETE "http://localhost:8081/api/portfolios/$SLUG" \
+            -H "Authorization: Bearer $TOKEN" -o /dev/null -w '%{http_code}' | grep -qx 204
+          LOGIN="$(jq -n --arg email "$EMAIL" --arg password "$PASSWORD" '{email:$email,password:$password}')"
+          LOGIN_TOKEN="$(curl -fsS -X POST http://localhost:8081/api/auth/login -H 'Content-Type: application/json' -d "$LOGIN" | jq -r .accessToken)"
+          curl -fsS http://localhost:8081/api/me -H "Authorization: Bearer $LOGIN_TOKEN" | jq -e '.email == "'"$EMAIL"'"' >/dev/null
+          echo "Register/login, portfolio CRUD, publish/unpublish and public read checks passed."
       - name: Upload API lockfile
         uses: actions/upload-artifact@v4
         with:
