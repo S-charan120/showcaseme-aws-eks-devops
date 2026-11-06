@@ -342,12 +342,29 @@ resource "aws_secretsmanager_secret" "database" {
 resource "aws_secretsmanager_secret_version" "database" {
   secret_id = aws_secretsmanager_secret.database.id
   secret_string = jsonencode({
-    host     = aws_db_instance.main.address
-    port     = aws_db_instance.main.port
-    database = var.db_name
-    username = var.db_username
-    password = random_password.db.result
+    host         = aws_db_instance.main.address
+    port         = aws_db_instance.main.port
+    database     = var.db_name
+    username     = var.db_username
+    password     = random_password.db.result
+    database_url = "postgresql://${urlencode(var.db_username)}:${urlencode(random_password.db.result)}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${var.db_name}?sslmode=verify-full"
   })
+}
+
+resource "random_password" "jwt" {
+  length  = 48
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "jwt" {
+  name                    = "${local.name}/jwt-secret"
+  description             = "ShowcaseMe API JWT signing secret."
+  recovery_window_in_days = 7
+}
+
+resource "aws_secretsmanager_secret_version" "jwt" {
+  secret_id     = aws_secretsmanager_secret.jwt.id
+  secret_string = random_password.jwt.result
 }
 
 # -------------------- Private S3 assets bucket --------------------
