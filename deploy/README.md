@@ -1,0 +1,50 @@
+# Kubernetes delivery and GitOps
+
+## GitLab is the deployment source
+The code is published on GitHub, but the resume-specific delivery path uses GitLab CI. Import or mirror this repository into a GitLab project at the path configured by `gitlab_project_path` in Terraform. The pipeline file is `.gitlab-ci.yml`. Configure a GitLab push mirror back to GitHub if you want the public GitHub copy to receive GitOps commits automatically.
+
+## GitLab CI variables
+Set these in GitLab > Settings > CI/CD > Variables:
+
+| Variable | Source |
+|---|---|
+| `AWS_ROLE_ARN` | Terraform output `gitlab_ci_role_arn` |
+| `AWS_REGION` | Same region used for Terraform |
+| `GITOPS_PUSH_TOKEN` | Masked project access token with only `write_repository` for this GitLab project |
+
+The pipeline uses a GitLab OIDC ID token with audience `sts.amazonaws.com`; it does not need stored AWS access keys. Terraform's trust policy is restricted to the configured GitLab project path and default branch.
+
+The project access token is only used to write the Helm image tag change back to Git. It is not an AWS credential. Protect it as a masked, protected variable. If the default branch is protected, allow this bot identity to push or implement a merge-request-based promotion instead.
+
+## Argo CD
+The Application manifests are in `argocd/`. Install Argo CD first, then apply:
+```bash
+kubectl apply -f deploy/argocd/metrics-server.yaml
+kubectl apply -f deploy/argocd/cluster-autoscaler.yaml
+kubectl apply -f deploy/argocd/application.yaml
+```
+Argo CD watches the GitLab repository's `main` branch and the Helm chart under `deploy/helm/showcaseme`. GitLab CI builds SHA-tagged images, publishes them to ECR and updates the Helm values file. Argo CD reconciles that Git change to EKS.
+
+Replace the placeholder IRSA role ARN and cluster name in `argocd/cluster-autoscaler.yaml` using Terraform outputs/variables before applying.
+
+## AWS Load Balancer Controller
+Install this controller after the EKS cluster is ready. Create its service account with the Terraform output role ARN:
+```bash
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  --namespace kube-system --create-namespace \
+  --set clusterName=showcaseme-dev \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=<ALB_CONTROLLER_ROLE_ARN> \
+  --set region=ap-south-1 \
+  --set vpcId=<VPC_ID>
+```
+Use the cluster name, region, VPC ID and IAM role returned by Terraform. Review the official controller release notes for a version compatible with the cluster version.
+
+## Initial deploy prerequisites
+- The ECR repositories must exist (Terraform creates them).
+- The RDS secret and runtime Kubernetes Secret must be created (see `docs/deployment.md`).
+- Update `values-aws.yaml` placeholders for ECR registry, application IRSA role, bucket and ingress domain.
+- The first GitLab pipeline pushes the first immutable image tags, then updates the GitOps values file.
