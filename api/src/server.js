@@ -14,7 +14,7 @@ const app = express();
 app.set('trust proxy', 1); // API is reachable only through the trusted Nginx reverse proxy.
 const port = Number(process.env.PORT || 8081);
 const jwtSecret = process.env.JWT_SECRET || '';
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 15, connectionTimeoutMillis: 5000, idleTimeoutMillis: 30000, ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : undefined });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 15, connectionTimeoutMillis: 5000, idleTimeoutMillis: 30000, ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: process.env.PGSSL_REJECT_UNAUTHORIZED !== 'false' } : undefined });
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
 const bucketName = process.env.S3_BUCKET || '';
 app.disable('x-powered-by');
