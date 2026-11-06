@@ -24,7 +24,6 @@ spec:
               eks.amazonaws.com/role-arn: REPLACE_WITH_TERRAFORM_CLUSTER_AUTOSCALER_ROLE_ARN
         extraArgs:
           balance-similar-node-groups: true
-          skip-nodes-with-system-pods: false
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
