@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: showcaseme
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/S-charan120/showcaseme-aws-eks-devops.git
+    targetRevision: main
+    path: deploy/helm/showcaseme
+    helm:
+      valueFiles:
+        - values-aws.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: showcaseme
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
