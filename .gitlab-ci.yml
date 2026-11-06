@@ -1,0 +1,43 @@
+stages: [validate, image, gitops]
+variables:
+  AWS_DEFAULT_REGION: ${AWS_REGION}
+  IMAGE_TAG: $CI_COMMIT_SHA
+  DOCKER_TLS_CERTDIR: "/certs"
+
+api-check:
+  stage: validate
+  image: node:22-alpine
+  script:
+    - cd api && npm install --no-audit --no-fund && npm test && npm run check
+
+web-build:
+  stage: validate
+  image: node:22-alpine
+  script:
+    - cd web && npm install --no-audit --no-fund && npm run build
+
+# Configure GitLab OIDC -> AWS role trust. Never store static AWS keys.
+ecr-publish:
+  stage: image
+  image: docker:27-cli
+  services: ["docker:27-dind"]
+  id_tokens:
+    AWS_ID_TOKEN:
+      aud: sts.amazonaws.com
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  script:
+    - apk add --no-cache aws-cli
+    - test -n "$AWS_ROLE_ARN" && test -n "$AWS_ACCOUNT_ID" && test -n "$AWS_REGION"
+    - export AWS_WEB_IDENTITY_TOKEN_FILE="$CI_PROJECT_DIR/.aws-token"
+    - echo "$AWS_ID_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
+    - export AWS_ROLE_SESSION_NAME="gitlab-$CI_PIPELINE_ID"
+    - aws sts assume-role-with-web-identity --role-arn "$AWS_ROLE_ARN" --role-session-name "$AWS_ROLE_SESSION_NAME" --web-identity-token "$AWS_ID_TOKEN" --duration-seconds 3600 > /tmp/creds.json
+    - export AWS_ACCESS_KEY_ID=$(aws --query Credentials.AccessKeyId --output text --cli-input-json file:///tmp/creds.json)
+    - export AWS_SECRET_ACCESS_KEY=$(aws --query Credentials.SecretAccessKey --output text --cli-input-json file:///tmp/creds.json)
+    - export AWS_SESSION_TOKEN=$(aws --query Credentials.SessionToken --output text --cli-input-json file:///tmp/creds.json)
+    - aws ecr get-login-password | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+    - docker build -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-api:$IMAGE_TAG" ./api
+    - docker build -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-web:$IMAGE_TAG" ./web
+    - docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-api:$IMAGE_TAG"
+    - docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/showcaseme-web:$IMAGE_TAG"
