@@ -27,7 +27,9 @@ api:
     - name: AWS_REGION
       value: ap-south-1
     - name: PGSSLMODE
-      value: require
+      value: verify-full
+    - name: PGSSLROOTCERT
+      value: /etc/ssl/certs/rds-global-bundle.pem
     - name: S3_BUCKET
       value: ""
   resources:
