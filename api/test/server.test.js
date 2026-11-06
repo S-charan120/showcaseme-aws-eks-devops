@@ -20,10 +20,15 @@ test('health endpoint is available without database credentials', async t => {
   });
 });
 
-test('readiness reports unavailable database instead of claiming ready', async t => {
+test('readiness accurately reflects database availability', async t => {
   await withServer(t, async base => {
     const response = await fetch(`${base}/ready`);
-    assert.equal(response.status, 503);
-    assert.deepEqual(await response.json(), { status: 'not-ready', database: 'unavailable' });
+    if (process.env.DATABASE_URL) {
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { status: 'ready', database: 'ok' });
+    } else {
+      assert.equal(response.status, 503);
+      assert.deepEqual(await response.json(), { status: 'not-ready', database: 'unavailable' });
+    }
   });
 });
