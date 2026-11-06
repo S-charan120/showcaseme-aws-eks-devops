@@ -23,9 +23,6 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: api/package.json
-      - name: Resolve dependencies and generate lockfile
-        working-directory: api
-        run: npm install --package-lock-only --no-audit --no-fund
       - name: Install from generated lockfile
         working-directory: api
         run: npm ci --no-audit --no-fund
@@ -48,9 +45,6 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package.json
-      - name: Resolve dependencies and generate lockfile
-        working-directory: web
-        run: npm install --package-lock-only --no-audit --no-fund
       - name: Install from generated lockfile
         working-directory: web
         run: npm ci --no-audit --no-fund
