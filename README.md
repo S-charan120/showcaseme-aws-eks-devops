@@ -31,7 +31,7 @@ flowchart TB
 ```
 
 ## Status and honesty
-Application source is present; AWS infrastructure, Helm, Argo CD and GitLab pipeline are being implemented/validated. A live EKS deployment and the 12-to-8-minute release improvement are **not claimed until measured**. This repository does not provision resources automatically.
+GitHub Actions validation has passed for API tests, frontend build, Docker image builds, Terraform fmt/init/validate and Helm lint/template rendering. GitLab CI and the live AWS EKS deployment still require an actual GitLab project and AWS account configuration. The 12-to-8-minute release improvement is **not claimed until measured**. This repository does not provision resources automatically.
 
 ## Cost warning
 EKS control plane, EC2 node groups, RDS, NAT Gateway, load balancers and data transfer can incur ongoing charges. Review plans and configure budgets before deployment. Tear down environments when not needed.
