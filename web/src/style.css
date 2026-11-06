@@ -1,0 +1,574 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;1,500&display=swap');
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #202a36;
+  background: #f4f6f8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+.app-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 42px;
+}
+
+.site-header {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  border-bottom: 1px solid #dfe5eb;
+}
+
+.brand {
+  font: 800 24px Manrope, sans-serif;
+  letter-spacing: -1.3px;
+  color: #243247;
+  text-decoration: none;
+  margin-right: auto;
+}
+
+.brand span {
+  color: #5489a7;
+}
+
+.nav {
+  display: flex;
+  gap: 5px;
+}
+
+.nav button,
+.account button {
+  border: 0;
+  background: transparent;
+  padding: 10px 13px;
+  color: #697789;
+  font-size: 12px;
+}
+
+.nav button.active {
+  color: #234967;
+  border-bottom: 2px solid #5489a7;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #637084;
+  font-size: 11px;
+}
+
+.account a {
+  font-size: 12px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 0.65fr;
+  gap: 30px;
+  align-items: center;
+  padding: 66px 0 55px;
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #5485a0;
+}
+
+.hero h1 {
+  font: 800 clamp(45px, 6vw, 74px)/1.04 Manrope, sans-serif;
+  letter-spacing: -4px;
+  margin: 16px 0;
+  color: #243247;
+}
+
+.hero h1 em {
+  font-family: 'Playfair Display', serif;
+  color: #5489a7;
+  font-weight: 500;
+}
+
+.lead {
+  max-width: 520px;
+  color: #6d7887;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.hero-art {
+  height: 210px;
+  background: #dce8ee;
+  display: grid;
+  place-items: center;
+  position: relative;
+  border-radius: 4px;
+}
+
+.circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #294a61;
+  color: #fff;
+  font: 800 64px Manrope;
+  box-shadow: 22px 18px 0 #a9c2d0;
+}
+
+.hero-art span {
+  position: absolute;
+  bottom: 17px;
+  right: 20px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #4b6577;
+}
+
+.auth {
+  display: grid;
+  grid-template-columns: 0.8fr 1fr;
+  gap: 70px;
+  background: #fff;
+  border: 1px solid #e1e6eb;
+  padding: 35px;
+  margin: 0 0 70px;
+}
+
+.auth h2,
+.editor h2 {
+  font: 700 28px Manrope;
+  margin: 5px 0 12px;
+}
+
+.auth > div p:not(.eyebrow) {
+  color: #6d7887;
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+.auth form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth label,
+.fields label {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475669;
+}
+
+.auth input,
+.fields input,
+.fields textarea,
+.fields select {
+  width: 100%;
+  border: 1px solid #dce2e8;
+  border-radius: 3px;
+  padding: 11px;
+  background: #fbfcfd;
+  color: #243247;
+  font-size: 13px;
+}
+
+.auth small,
+.fields small {
+  font-size: 10px;
+  color: #8491a0;
+  font-weight: 400;
+}
+
+.switch {
+  display: flex;
+  gap: 10px;
+}
+
+.switch button {
+  border: 1px solid #dce2e8;
+  background: white;
+  padding: 9px 13px;
+  color: #637184;
+  font-size: 11px;
+}
+
+.switch button.selected {
+  border-color: #5489a7;
+  color: #294a61;
+  background: #edf4f7;
+}
+
+.primary,
+.secondary,
+.danger {
+  border: 0;
+  padding: 12px 17px;
+  font-size: 12px;
+}
+
+.primary {
+  background: #294d65;
+  color: white;
+}
+
+.secondary {
+  background: #e8eff3;
+  color: #294d65;
+}
+
+.danger {
+  background: #faeeee;
+  color: #9b4a4a;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  font-size: 12px;
+  color: #a35d3a;
+  min-height: 16px;
+}
+
+.studio {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 22px;
+  margin-bottom: 75px;
+}
+
+.studio aside,
+.editor {
+  background: white;
+  border: 1px solid #e1e6eb;
+  padding: 22px;
+}
+
+.side-head,
+.editor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.side-head h3 {
+  font: 700 18px Manrope;
+  margin: 6px 0 20px;
+}
+
+.side-head button {
+  border: 0;
+  background: #e7eff3;
+  color: #294d65;
+  padding: 9px;
+  font-size: 11px;
+}
+
+.empty-list {
+  color: #8793a0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.portfolio-item {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid transparent;
+  background: #f7f9fa;
+  margin-bottom: 7px;
+  color: #38495a;
+}
+
+.portfolio-item span {
+  font-size: 10px;
+  color: #8793a0;
+}
+
+.portfolio-item.chosen {
+  border-color: #6a9ab2;
+  background: #edf4f7;
+}
+
+.editor-head {
+  margin-bottom: 22px;
+}
+
+.editor-head h2 {
+  margin-bottom: 0;
+}
+
+.state {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #82909c;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px 18px;
+}
+
+.fields .wide {
+  grid-column: 1 / -1;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.public-shell {
+  max-width: 960px;
+  padding-top: 35px;
+  padding-bottom: 60px;
+  margin: 0 auto;
+}
+
+.public-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.public-hero {
+  padding: 75px 0 50px;
+  border-bottom: 1px solid #dfe5eb;
+}
+
+.public-hero h1 {
+  font: 800 clamp(46px, 7vw, 80px)/1.05 Manrope;
+  letter-spacing: -4px;
+  margin: 10px 0;
+}
+
+.public-hero h2 {
+  font: 500 23px 'Playfair Display', serif;
+  color: #5686a0;
+}
+
+.public-hero > p:last-child {
+  max-width: 650px;
+  color: #697889;
+  line-height: 1.8;
+}
+
+.public-section {
+  padding: 28px 0;
+  border-bottom: 1px solid #dfe5eb;
+}
+
+.public-section h3 {
+  font: 700 18px Manrope;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chips span {
+  background: #e1edf2;
+  padding: 7px 10px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: #3b6076;
+}
+
+.entry {
+  padding: 12px 0;
+  border-bottom: 1px solid #e6ebef;
+}
+
+.entry b,
+.entry span {
+  display: block;
+}
+
+.entry span {
+  font-size: 11px;
+  color: #718091;
+  margin-top: 4px;
+}
+
+.entry p,
+.project p {
+  color: #687787;
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.project {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e1e6eb;
+}
+
+.project a {
+  font-size: 11px;
+  color: #346f92;
+}
+
+.template-editorial .public-hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 500;
+}
+
+.template-technical .public-hero {
+  border-left: 3px solid #5489a7;
+  padding-left: 25px;
+}
+
+.public-footer,
+.app-footer {
+  border-top: 1px solid #dfe5eb;
+  padding: 22px 0 28px;
+  display: flex;
+  justify-content: space-between;
+  color: #8692a0;
+  font-size: 11px;
+  margin-top: 35px;
+}
+
+.app-footer {
+  margin-top: 0;
+}
+
+.app-footer b {
+  font: 800 15px Manrope;
+  color: #294a61;
+}
+
+.public-footer a {
+  color: #346f92;
+}
+
+.share {
+  font-size: 11px;
+  color: #647184;
+  overflow-wrap: anywhere;
+}
+
+.share a {
+  color: #346f92;
+}
+
+@media (max-width: 850px) {
+  .app-shell {
+    padding: 0 20px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 48px 0;
+  }
+
+  .hero-art {
+    height: 160px;
+  }
+
+  .auth {
+    grid-template-columns: 1fr;
+    gap: 25px;
+    margin-bottom: 35px;
+  }
+
+  .studio {
+    grid-template-columns: 1fr;
+  }
+
+  .studio aside {
+    order: 2;
+  }
+
+  .fields {
+    grid-template-columns: 1fr;
+  }
+
+  .fields .wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-header {
+    gap: 6px;
+  }
+
+  .account span {
+    display: none;
+  }
+
+  .nav button {
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  .hero h1 {
+    letter-spacing: -2px;
+  }
+
+  .auth {
+    padding: 20px;
+  }
+
+  .editor {
+    padding: 17px;
+  }
+
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-footer,
+  .app-footer {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
