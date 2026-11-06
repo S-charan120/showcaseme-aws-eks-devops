@@ -24,7 +24,7 @@ api-test:
   image: node:22-alpine
   script:
     - cd api
-    - npm install --no-audit --no-fund
+    - npm ci --no-audit --no-fund
     - npm test
     - npm run check
   rules:
