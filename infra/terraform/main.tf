@@ -11,8 +11,8 @@ data "tls_certificate" "gitlab" {
 }
 
 locals {
-  name = "${var.project_name}-${var.environment}"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 2)
+  name            = "${var.project_name}-${var.environment}"
+  azs             = slice(data.aws_availability_zones.available.names, 0, 2)
   eks_oidc_issuer = aws_eks_cluster.main.identity[0].oidc[0].issuer
   eks_oidc_host   = replace(local.eks_oidc_issuer, "https://", "")
 }
@@ -37,8 +37,8 @@ resource "aws_subnet" "public" {
   availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = true
   tags = {
-    Name = "${local.name}-public-${count.index + 1}"
-    "kubernetes.io/role/elb" = "1"
+    Name                                  = "${local.name}-public-${count.index + 1}"
+    "kubernetes.io/role/elb"              = "1"
     "kubernetes.io/cluster/${local.name}" = "shared"
   }
 }
@@ -49,8 +49,8 @@ resource "aws_subnet" "private" {
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = local.azs[count.index]
   tags = {
-    Name = "${local.name}-private-${count.index + 1}"
-    "kubernetes.io/role/internal-elb" = "1"
+    Name                                  = "${local.name}-private-${count.index + 1}"
+    "kubernetes.io/role/internal-elb"     = "1"
     "kubernetes.io/cluster/${local.name}" = "shared"
   }
 }
@@ -107,9 +107,9 @@ resource "aws_iam_role" "eks_cluster" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "eks.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -124,9 +124,9 @@ resource "aws_iam_role" "eks_nodes" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "ec2.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -309,28 +309,28 @@ resource "random_password" "db" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier                  = "${local.name}-postgres"
-  engine                      = "postgres"
-  instance_class              = var.db_instance_class
-  allocated_storage           = 20
-  max_allocated_storage       = 50
-  storage_type                = "gp3"
-  storage_encrypted           = true
-  db_name                     = var.db_name
-  username                    = var.db_username
-  password                    = random_password.db.result
-  port                        = 5432
-  db_subnet_group_name        = aws_db_subnet_group.main.name
-  vpc_security_group_ids      = [aws_security_group.rds.id]
-  publicly_accessible         = false
-  multi_az                    = false
-  backup_retention_period     = var.db_backup_retention_days
-  auto_minor_version_upgrade  = true
-  deletion_protection         = false
-  skip_final_snapshot         = true
-  apply_immediately           = false
+  identifier                      = "${local.name}-postgres"
+  engine                          = "postgres"
+  instance_class                  = var.db_instance_class
+  allocated_storage               = 20
+  max_allocated_storage           = 50
+  storage_type                    = "gp3"
+  storage_encrypted               = true
+  db_name                         = var.db_name
+  username                        = var.db_username
+  password                        = random_password.db.result
+  port                            = 5432
+  db_subnet_group_name            = aws_db_subnet_group.main.name
+  vpc_security_group_ids          = [aws_security_group.rds.id]
+  publicly_accessible             = false
+  multi_az                        = false
+  backup_retention_period         = var.db_backup_retention_days
+  auto_minor_version_upgrade      = true
+  deletion_protection             = false
+  skip_final_snapshot             = true
+  apply_immediately               = false
   enabled_cloudwatch_logs_exports = ["postgresql"]
-  tags = { Name = "${local.name}-postgres" }
+  tags                            = { Name = "${local.name}-postgres" }
 }
 
 resource "aws_secretsmanager_secret" "database" {
@@ -434,8 +434,8 @@ resource "aws_iam_role_policy" "app_s3" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
-      Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+      Effect   = "Allow"
+      Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
       Resource = ["${aws_s3_bucket.assets.arn}/portfolio-assets/*"]
     }]
   })
@@ -493,7 +493,7 @@ resource "aws_iam_role_policy" "cluster_autoscaler" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/enabled" = "true"
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/enabled"       = "true"
             "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/${local.name}" = "owned"
           }
         }
@@ -508,9 +508,9 @@ resource "aws_iam_role" "alb_controller" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Federated = aws_iam_openid_connect_provider.eks.arn }
-      Action = "sts:AssumeRoleWithWebIdentity"
+      Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
           "${local.eks_oidc_host}:aud" = "sts.amazonaws.com"
@@ -543,9 +543,9 @@ resource "aws_iam_role" "gitlab_ci" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Federated = aws_iam_openid_connect_provider.gitlab.arn }
-      Action = "sts:AssumeRoleWithWebIdentity"
+      Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
           "gitlab.com:aud" = "sts.amazonaws.com"
