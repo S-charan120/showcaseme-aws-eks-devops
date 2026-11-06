@@ -190,6 +190,25 @@ resource "aws_eks_node_group" "main" {
     aws_iam_role_policy_attachment.node_ecr
   ]
   tags = { Name = "${local.name}-managed-nodes" }
+
+  lifecycle {
+    ignore_changes = [scaling_config[0].desired_size]
+  }
+}
+
+resource "aws_autoscaling_group_tag" "cluster_autoscaler" {
+  for_each = toset(aws_eks_node_group.main.resources[0].autoscaling_groups[*].name)
+  autoscaling_group_name = each.value
+  tag {
+    key                 = "k8s.io/cluster-autoscaler/enabled"
+    value               = "true"
+    propagate_at_launch = false
+  }
+  tag {
+    key                 = "k8s.io/cluster-autoscaler/${local.name}"
+    value               = "owned"
+    propagate_at_launch = false
+  }
 }
 
 resource "aws_eks_addon" "vpc_cni" {
@@ -395,6 +414,65 @@ resource "aws_iam_role_policy" "app_s3" {
   })
 }
 
+# -------------------- Cluster Autoscaler IRSA --------------------
+resource "aws_iam_role" "cluster_autoscaler" {
+  name = "${local.name}-cluster-autoscaler"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.eks.arn }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.eks_oidc_host}:aud" = "sts.amazonaws.com"
+          "${local.eks_oidc_host}:sub" = "system:serviceaccount:kube-system:cluster-autoscaler"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "cluster_autoscaler" {
+  name = "discover-and-scale-managed-node-groups"
+  role = aws_iam_role.cluster_autoscaler.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeAutoScalingInstances",
+          "autoscaling:DescribeLaunchConfigurations",
+          "autoscaling:DescribeScalingActivities",
+          "autoscaling:DescribeTags",
+          "ec2:DescribeImages",
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeLaunchTemplateVersions",
+          "ec2:GetInstanceTypesFromInstanceRequirements",
+          "eks:DescribeNodegroup"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:SetDesiredCapacity",
+          "autoscaling:TerminateInstanceInAutoScalingGroup"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/enabled" = "true"
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/${local.name}" = "owned"
+          }
+        }
+      }
+    ]
+  })
+}
+
 # -------------------- AWS Load Balancer Controller IRSA --------------------
 resource "aws_iam_role" "alb_controller" {
   name = "${local.name}-alb-controller"
@@ -442,7 +520,7 @@ resource "aws_iam_role" "gitlab_ci" {
       Condition = {
         StringEquals = {
           "gitlab.com:aud" = "sts.amazonaws.com"
-          "gitlab.com:sub" = "project_path:S-charan120/showcaseme-aws-eks-devops:ref_type:branch:ref:main"
+          "gitlab.com:sub" = "project_path:${var.gitlab_project_path}:ref_type:branch:ref:${var.gitlab_branch}"
         }
       }
     }]
