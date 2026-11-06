@@ -1,0 +1,105 @@
+name: AWS EKS repository validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: showcaseme-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package.json
+      - name: Resolve dependencies and generate lockfile
+        working-directory: api
+        run: npm install --package-lock-only --no-audit --no-fund
+      - name: Install from generated lockfile
+        working-directory: api
+        run: npm ci --no-audit --no-fund
+      - name: Test and syntax checks
+        working-directory: api
+        run: npm test && npm run check
+      - name: Upload API lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: showcaseme-api-lockfile
+          path: api/package-lock.json
+          retention-days: 7
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package.json
+      - name: Resolve dependencies and generate lockfile
+        working-directory: web
+        run: npm install --package-lock-only --no-audit --no-fund
+      - name: Install from generated lockfile
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+      - name: Build React frontend
+        working-directory: web
+        run: npm run build
+      - name: Upload web lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: showcaseme-web-lockfile
+          path: web/package-lock.json
+          retention-days: 7
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+      - name: Format check
+        working-directory: infra/terraform
+        run: terraform fmt -check -recursive
+      - name: Initialize without cloud backend
+        working-directory: infra/terraform
+        run: terraform init -backend=false
+      - name: Validate
+        working-directory: infra/terraform
+        run: terraform validate
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.17.1
+      - name: Lint chart
+        run: helm lint deploy/helm/showcaseme
+      - name: Render default chart
+        run: helm template showcaseme deploy/helm/showcaseme --namespace showcaseme
+      - name: Render AWS chart
+        run: helm template showcaseme deploy/helm/showcaseme --namespace showcaseme -f deploy/helm/showcaseme/values-aws.yaml
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t showcaseme-api:ci ./api
+      - name: Build frontend image
+        run: docker build -t showcaseme-web:ci ./web
