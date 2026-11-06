@@ -150,4 +150,4 @@ async function start() {
   process.once('SIGINT', () => shutdown('SIGINT'));
 }
 if (require.main === module) start().catch(err => { console.error(err); process.exit(1); });
-module.exports = { app, start };
+module.exports = { app, start, pool };
