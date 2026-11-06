@@ -1,6 +1,9 @@
 FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app
+RUN apk add --no-cache ca-certificates curl \
+    && curl -fsSLo /etc/ssl/certs/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+    && chmod 0444 /etc/ssl/certs/rds-global-bundle.pem
 COPY package*.json ./
 RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY src ./src
