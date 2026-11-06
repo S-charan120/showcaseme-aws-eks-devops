@@ -1,0 +1,29 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { app } = require('../src/server');
+
+async function withServer(t, run) {
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  await run(`http://127.0.0.1:${server.address().port}`);
+}
+
+test('health endpoint is available without database credentials', async t => {
+  await withServer(t, async base => {
+    const response = await fetch(`${base}/health`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: 'ok', service: 'showcaseme-api' });
+  });
+});
+
+test('readiness reports unavailable database instead of claiming ready', async t => {
+  await withServer(t, async base => {
+    const response = await fetch(`${base}/ready`);
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { status: 'not-ready', database: 'unavailable' });
+  });
+});
