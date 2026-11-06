@@ -7,3 +7,5 @@ coverage/
 *.log
 terraform.tfstate*
 **/.terraform/
+
+*.tfplan
