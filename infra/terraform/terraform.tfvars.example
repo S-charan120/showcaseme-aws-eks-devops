@@ -1,0 +1,18 @@
+aws_region       = "ap-south-1"
+project_name     = "showcaseme"
+environment      = "dev"
+cluster_version  = "1.36"
+
+# Replace with your current public IP, for example ["203.0.113.10/32"].
+# The example loopback default is intentionally nonfunctional from the internet.
+cluster_admin_cidrs = ["127.0.0.1/32"]
+
+node_instance_types = ["t3.medium"]
+node_min_size       = 1
+node_desired_size   = 2
+node_max_size       = 3
+
+db_instance_class         = "db.t4g.micro"
+db_name                   = "showcaseme"
+db_username               = "showcaseme_admin"
+db_backup_retention_days  = 1
