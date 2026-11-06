@@ -367,6 +367,141 @@ resource "aws_secretsmanager_secret_version" "jwt" {
   secret_string = random_password.jwt.result
 }
 
+# -------------------- Private S3 assets bucket --------------------
+resource "aws_s3_bucket" "assets" {
+  bucket_prefix = "${var.project_name}-${var.environment}-${data.aws_caller_identity.current.account_id}-"
+  force_destroy = false
+}
+
+resource "aws_s3_bucket_public_access_block" "assets" {
+  bucket                  = aws_s3_bucket.assets.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
+  bucket = aws_s3_bucket.assets.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "assets" {
+  bucket = aws_s3_bucket.assets.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# -------------------- EKS OIDC and application IRSA --------------------
+data "tls_certificate" "eks" {
+  url = local.eks_oidc_issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  url             = local.eks_oidc_issuer
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+}
+
+resource "aws_iam_role" "app_irsa" {
+  name = "${local.name}-app-s3-irsa"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.eks.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.eks_oidc_host}:aud" = "sts.amazonaws.com"
+          "${local.eks_oidc_host}:sub" = "system:serviceaccount:showcaseme:showcaseme-api"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "app_s3" {
+  name = "access-showcaseme-assets"
+  role = aws_iam_role.app_irsa.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+      Resource = ["${aws_s3_bucket.assets.arn}/portfolio-assets/*"]
+    }]
+  })
+}
+
+# -------------------- Cluster Autoscaler IRSA --------------------
+resource "aws_iam_role" "cluster_autoscaler" {
+  name = "${local.name}-cluster-autoscaler"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.eks.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.eks_oidc_host}:aud" = "sts.amazonaws.com"
+          "${local.eks_oidc_host}:sub" = "system:serviceaccount:kube-system:cluster-autoscaler"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "cluster_autoscaler" {
+  name = "discover-and-scale-managed-node-groups"
+  role = aws_iam_role.cluster_autoscaler.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeAutoScalingInstances",
+          "autoscaling:DescribeLaunchConfigurations",
+          "autoscaling:DescribeScalingActivities",
+          "autoscaling:DescribeTags",
+          "ec2:DescribeImages",
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeLaunchTemplateVersions",
+          "ec2:GetInstanceTypesFromInstanceRequirements",
+          "eks:DescribeNodegroup"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:SetDesiredCapacity",
+          "autoscaling:TerminateInstanceInAutoScalingGroup"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/enabled" = "true"
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/${local.name}" = "owned"
+          }
+        }
+      }
+    ]
+  })
+}
+
 # -------------------- AWS Load Balancer Controller IRSA --------------------
 resource "aws_iam_role" "alb_controller" {
   name = "${local.name}-alb-controller"
