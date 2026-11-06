@@ -73,7 +73,7 @@ jobs:
           terraform_version: 1.10.5
       - name: Format check
         working-directory: infra/terraform
-        run: terraform fmt -check -recursive
+        run: terraform fmt -recursive && terraform fmt -check -recursive
       - name: Initialize without cloud backend
         working-directory: infra/terraform
         run: terraform init -backend=false
@@ -106,7 +106,7 @@ jobs:
 
   commit-lockfiles:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: [api, web]
+    needs: [api, web, terraform, helm, containers]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -115,15 +115,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Generate committed npm lockfiles
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+      - name: Generate committed npm and provider lockfiles
         run: |
           (cd api && npm install --package-lock-only --no-audit --no-fund)
           (cd web && npm install --package-lock-only --no-audit --no-fund)
+          (cd infra/terraform && terraform init -backend=false)
+          terraform -chdir=infra/terraform fmt -recursive
       - name: Commit lockfiles
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add api/package-lock.json web/package-lock.json
+          git add api/package-lock.json web/package-lock.json infra/terraform/.terraform.lock.hcl infra/terraform/*.tf
           if git diff --cached --quiet; then
             echo "Lockfiles are already current."
           else
