@@ -16,6 +16,9 @@ services:
 
   api:
     build: ./api
+    networks:
+      default:
+        aliases: [showcaseme-api]
     environment:
       PORT: 8081
       NODE_ENV: production
@@ -36,8 +39,11 @@ services:
 
   web:
     build: ./web
+    networks:
+      default:
+        aliases: [showcaseme-web]
     ports:
-      - "8080:80"
+      - "8080:8080"
     depends_on:
       api:
         condition: service_healthy
