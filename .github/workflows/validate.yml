@@ -89,6 +89,27 @@ jobs:
       - name: Render AWS chart
         run: helm template showcaseme deploy/helm/showcaseme --namespace showcaseme -f deploy/helm/showcaseme/values-aws.yaml
 
+  gitlab-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check PyYAML
+      - name: Parse GitLab pipeline and check required stages
+        run: |
+          python - <<'PY'
+          import yaml
+          with open(".gitlab-ci.yml", encoding="utf-8") as handle:
+              config = yaml.safe_load(handle)
+          assert config["stages"] == ["validate", "container-build", "publish", "promote"]
+          for job in ("api-test", "web-build", "terraform-validate", "helm-validate", "container-build", "ecr-publish", "gitops-promote"):
+              assert job in config, f"missing GitLab job: {job}"
+          print("GitLab CI YAML parses and required jobs/stages are present.")
+          PY
+
   containers:
     runs-on: ubuntu-latest
     steps:
