@@ -15,7 +15,7 @@ variable "environment" {
 }
 
 variable "cluster_version" {
-  description = "EKS Kubernetes version. 1.36 is currently in standard support as of November 2026."
+  description = "EKS Kubernetes version; keep this aligned with the Cluster Autoscaler chart appVersion configured in deploy/argocd/cluster-autoscaler.yaml."
   type        = string
   default     = "1.35"
 }
