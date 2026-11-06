@@ -17,7 +17,7 @@ variable "environment" {
 variable "cluster_version" {
   description = "EKS Kubernetes version. 1.36 is currently in standard support as of November 2026."
   type        = string
-  default     = "1.36"
+  default     = "1.35"
 }
 
 variable "vpc_cidr" {
@@ -59,6 +59,17 @@ variable "node_desired_size" {
 variable "node_max_size" {
   type    = number
   default = 3
+}
+
+variable "gitlab_project_path" {
+  description = "GitLab namespace/project path used in the OIDC trust policy."
+  type        = string
+  default     = "S-charan120/showcaseme-aws-eks-devops"
+}
+
+variable "gitlab_branch" {
+  type    = string
+  default = "main"
 }
 
 variable "db_instance_class" {
