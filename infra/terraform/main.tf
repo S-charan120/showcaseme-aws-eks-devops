@@ -367,6 +367,23 @@ resource "aws_secretsmanager_secret_version" "jwt" {
   secret_string = random_password.jwt.result
 }
 
+resource "aws_iam_policy" "app_secrets_read" {
+  name = "${local.name}-runtime-secret-read"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue"]
+      Resource = [aws_secretsmanager_secret.database.arn, aws_secretsmanager_secret.jwt.arn]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "app_secrets_read" {
+  role       = aws_iam_role.app_irsa.name
+  policy_arn = aws_iam_policy.app_secrets_read.arn
+}
+
 # -------------------- Private S3 assets bucket --------------------
 resource "aws_s3_bucket" "assets" {
   bucket_prefix = "${var.project_name}-${var.environment}-${data.aws_caller_identity.current.account_id}-"
