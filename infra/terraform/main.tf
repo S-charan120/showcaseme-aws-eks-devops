@@ -347,7 +347,7 @@ resource "aws_secretsmanager_secret_version" "database" {
     database     = var.db_name
     username     = var.db_username
     password     = random_password.db.result
-    database_url = "postgresql://${urlencode(var.db_username)}:${urlencode(random_password.db.result)}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${var.db_name}?sslmode=verify-full"
+    database_url = "postgresql://${urlencode(var.db_username)}:${urlencode(random_password.db.result)}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${var.db_name}"
   })
 }
 
