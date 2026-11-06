@@ -1,0 +1,39 @@
+global:
+  awsRegion: ap-south-1
+  s3Bucket: REPLACE_WITH_TERRAFORM_OUTPUT
+
+api:
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/showcaseme-api
+    tag: bootstrap
+  serviceAccount:
+    create: true
+    name: showcaseme-api
+    annotations:
+      eks.amazonaws.com/role-arn: REPLACE_WITH_APP_IRSA_ROLE_ARN
+  env:
+    - name: PORT
+      value: "8081"
+    - name: NODE_ENV
+      value: production
+    - name: AWS_REGION
+      value: ap-south-1
+    - name: PGSSLMODE
+      value: require
+    - name: S3_BUCKET
+      value: REPLACE_WITH_TERRAFORM_OUTPUT
+
+web:
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/showcaseme-web
+    tag: bootstrap
+
+ingress:
+  enabled: true
+  host: portfolio.example.com
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/success-codes: "200"
