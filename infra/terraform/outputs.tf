@@ -39,6 +39,14 @@ output "app_irsa_role_arn" {
   value = aws_iam_role.app_irsa.arn
 }
 
+output "cluster_autoscaler_role_arn" {
+  value = aws_iam_role.cluster_autoscaler.arn
+}
+
+output "aws_account_id" {
+  value = data.aws_caller_identity.current.account_id
+}
+
 output "alb_controller_role_arn" {
   value = aws_iam_role.alb_controller.arn
 }
