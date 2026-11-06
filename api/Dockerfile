@@ -5,7 +5,7 @@ RUN apk add --no-cache ca-certificates curl \
     && curl -fsSLo /etc/ssl/certs/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
     && chmod 0444 /etc/ssl/certs/rds-global-bundle.pem
 COPY package*.json ./
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY src ./src
 COPY migrations ./migrations
 USER node
