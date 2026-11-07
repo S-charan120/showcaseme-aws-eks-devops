@@ -9,12 +9,14 @@ Set these in GitLab > Settings > CI/CD > Variables:
 | Variable | Source |
 |---|---|
 | `AWS_ROLE_ARN` | Terraform output `gitlab_ci_role_arn` |
-| `AWS_REGION` | Same region used for Terraform |
+| `AWS_REGION` | Terraform output `aws_region` |
+| `ECR_API_REPOSITORY` | Terraform output `ecr_api_repository_url` |
+| `ECR_WEB_REPOSITORY` | Terraform output `ecr_web_repository_url` |
 | `GITOPS_PUSH_TOKEN` | Masked project access token with only `write_repository` for this GitLab project |
 
-The pipeline uses a GitLab OIDC ID token with audience `sts.amazonaws.com`; it does not need stored AWS access keys. Terraform's trust policy is restricted to the configured GitLab project path and default branch.
+The pipeline uses a GitLab OIDC ID token with audience `sts.amazonaws.com`; it does not need stored AWS access keys. Terraform's trust policy is restricted to the configured GitLab project path and default branch. The ECR repository variables must contain the full repository URLs returned by Terraform, including registry/account and repository name.
 
-The project access token is only used to write the Helm image tag change back to Git. It is not an AWS credential. Protect it as a masked, protected variable. If the default branch is protected, allow this bot identity to push or implement a merge-request-based promotion instead.
+The publish job checks each immutable `sha-$CI_COMMIT_SHA` tag before pushing, so retries reuse an image that already exists. The GitOps promotion job uses a GitLab `resource_group` to serialize updates to the Helm values file. The project access token is only used to write the Helm image tag change back to Git. It is not an AWS credential. Protect it as a masked, protected variable. If the default branch is protected, allow this bot identity to push or implement a merge-request-based promotion instead.
 
 ## Argo CD
 The Application manifests are in `argocd/`. Install Argo CD first, then apply:

@@ -12,7 +12,7 @@ Use Terraform 1.6+ and AWS CLI. Configure an encrypted remote state backend with
 cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit cluster_admin_cidrs to your own current public IPv4 address /32.
-terraform fmt -recursive
+terraform fmt -check -recursive
 terraform init
 terraform validate
 terraform plan -out=tfplan
@@ -67,7 +67,7 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
   --set serviceAccount.create=true \
   --set serviceAccount.name=aws-load-balancer-controller \
   --set serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn="$(terraform output -raw alb_controller_role_arn)" \
-  --set region=ap-south-1 \
+  --set region="$(terraform output -raw aws_region)" \
   --set vpcId="$(terraform output -raw vpc_id)"
 ```
 
@@ -78,24 +78,27 @@ Import or mirror this GitHub repository into GitLab at the project path set in `
 
 Set protected/masked CI variables:
 - `AWS_ROLE_ARN`: Terraform output `gitlab_ci_role_arn`.
-- `AWS_REGION`: Terraform region.
+- `AWS_REGION`: Terraform output `aws_region`.
+- `ECR_API_REPOSITORY`: Terraform output `ecr_api_repository_url`.
+- `ECR_WEB_REPOSITORY`: Terraform output `ecr_web_repository_url`.
 - `GITOPS_PUSH_TOKEN`: GitLab project access token with `write_repository` scope, used only for committing Helm image tags (not for AWS access).
 
 The pipeline uses an OIDC ID token with audience `sts.amazonaws.com`. Terraform trust is restricted to the configured GitLab project and default branch. Do not create long-lived AWS access keys.
 
-The first main-branch run validates code, builds API/web images, publishes SHA-tagged images to ECR, then commits those immutable image tags to `deploy/helm/showcaseme/values-aws.yaml`. Configure the GitLab push mirror to GitHub if you want these GitOps promotion commits reflected on the public GitHub repository. Ensure protected-branch settings permit the approved CI identity or change promotion to a merge-request workflow.
+The main-branch pipeline validates code, builds API/web images, and publishes SHA-tagged images to ECR. The publish job is serialized and checks for an existing immutable SHA tag before building or pushing, so a retry reuses an image instead of trying to overwrite it. The GitOps promotion job is also serialized and updates the two image tags in `deploy/helm/showcaseme/values-aws.yaml`. Configure the GitLab push mirror to GitHub if you want these GitOps promotion commits reflected on the public GitHub repository. Ensure protected-branch settings permit the approved CI identity or change promotion to a merge-request workflow.
 
 ## 6. Update AWS Helm values
 Update `deploy/helm/showcaseme/values-aws.yaml` placeholders with:
 - ECR API and web repository URLs from Terraform outputs.
+- `api.env.AWS_REGION` from Terraform output `aws_region`.
 - `app_irsa_role_arn`.
 - `s3_assets_bucket`.
 - A DNS host only after domain/HTTPS configuration is completed.
 
-For initial testing, keep ingress host empty to use the ALB DNS address. Note that an empty host creates a hostless Ingress rule; verify the AWS Load Balancer Controller provisions the ALB and its default routing as expected. The AWS Helm values now configure an HTTPS-only ALB listener (443) and redirect HTTP to HTTPS. Before applying, set `alb.ingress.kubernetes.io/certificate-arn` in `deploy/helm/showcaseme/values-aws.yaml` to an ACM certificate ARN in the same region as the ALB. Without that certificate annotation, ALB provisioning will fail; do not deploy publicly until DNS points to the ALB and the certificate is validated.
+For initial testing, keep ingress host empty to use the ALB DNS address. Note that an empty host creates a hostless Ingress rule; verify the AWS Load Balancer Controller provisions the ALB and its default routing as expected. The AWS Helm values now configure an HTTPS-only ALB listener (443) and redirect HTTP to HTTPS. The chart supports two scaling modes: with API/web autoscaling enabled (the default), the Horizontal Pod Autoscalers own replica counts and the Deployments omit `spec.replicas`; with autoscaling disabled, `api.replicaCount` and `web.replicaCount` set fixed Deployment replica counts. GitHub Actions renders and checks both modes against the default and AWS values. Before applying, set `alb.ingress.kubernetes.io/certificate-arn` in `deploy/helm/showcaseme/values-aws.yaml` to an ACM certificate ARN in the same region as the ALB. Without that certificate annotation, ALB provisioning will fail; do not deploy publicly until DNS points to the ALB and the certificate is validated.
 
 ## 7. Install autoscaling components and sync Argo CD
-Apply the Argo CD Application manifests in `deploy/argocd`. Before applying `cluster-autoscaler.yaml`, replace the role ARN and cluster name using Terraform outputs. The configured chart is compatible with Kubernetes 1.35; keep Cluster Autoscaler minor version aligned with the cluster.
+Apply the Argo CD Application manifests in `deploy/argocd`. Before applying `cluster-autoscaler.yaml`, replace the role ARN, cluster name, and `awsRegion` with `cluster_autoscaler_role_arn`, `cluster_name`, and `aws_region` from Terraform outputs. The manifest defaults intentionally match `project_name = showcaseme`, `environment = dev`, and `aws_region = ap-south-1`; update all three when changing those Terraform inputs. The configured chart is compatible with Kubernetes 1.35; keep Cluster Autoscaler minor version aligned with the cluster.
 
 ```bash
 kubectl apply -f deploy/argocd/metrics-server.yaml

@@ -12,9 +12,9 @@ spec:
     helm:
       values: |
         cloudProvider: aws
-        awsRegion: ap-south-1
+        awsRegion: ap-south-1 # Must match aws_region in infra/terraform/variables.tf
         autoDiscovery:
-          clusterName: showcaseme-dev
+          clusterName: showcaseme-dev # Must match project_name-environment in infra/terraform/variables.tf
         rbac:
           create: true
           serviceAccount:
