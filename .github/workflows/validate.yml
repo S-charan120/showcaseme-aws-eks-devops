@@ -164,7 +164,13 @@ jobs:
             -f deploy/helm/showcaseme/values-aws.yaml \
             --set api.autoscaling.enabled=false \
             --set web.autoscaling.enabled=false > /tmp/showcaseme-fixed-replicas.yaml
-          test "$(grep -c '^kind: Deployment
+          python3 - <<'PY'
+          from pathlib import Path
+          rendered = Path('/tmp/showcaseme-fixed-replicas.yaml').read_text(encoding='utf-8')
+          assert rendered.count('kind: Deployment') == 2, 'expected API and web Deployments'
+          assert rendered.count('kind: HorizontalPodAutoscaler') == 0, 'HPAs must be disabled'
+          assert rendered.count('  replicas: 2') == 2, 'fixed replica counts must render for both Deployments'
+          PY
 
   gitlab-config:
     runs-on: ubuntu-latest
