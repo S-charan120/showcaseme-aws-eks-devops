@@ -102,18 +102,34 @@ ecr-publish:
   script:
     - apk add --no-cache aws-cli
     - test -n "$AWS_ROLE_ARN" && test -n "$AWS_REGION"
+    - test -n "$ECR_API_REPOSITORY" && test -n "$ECR_WEB_REPOSITORY"
     - mkdir -p "$CI_PROJECT_DIR/.aws"
     - printf '%s' "$AWS_ID_TOKEN" > "$CI_PROJECT_DIR/.aws/web-identity-token"
     - export AWS_WEB_IDENTITY_TOKEN_FILE="$CI_PROJECT_DIR/.aws/web-identity-token"
     - export AWS_ROLE_SESSION_NAME="showcaseme-gitlab-$CI_PIPELINE_ID"
     - aws sts get-caller-identity
-    - export AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
-    - export ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-    - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
-    - docker build -t "$ECR_REGISTRY/showcaseme-api:sha-$CI_COMMIT_SHA" ./api
-    - docker build -t "$ECR_REGISTRY/showcaseme-web:sha-$CI_COMMIT_SHA" ./web
-    - docker push "$ECR_REGISTRY/showcaseme-api:sha-$CI_COMMIT_SHA"
-    - docker push "$ECR_REGISTRY/showcaseme-web:sha-$CI_COMMIT_SHA"
+    - |
+      set -eu
+      API_REGISTRY="${ECR_API_REPOSITORY%%/*}"
+      WEB_REGISTRY="${ECR_WEB_REPOSITORY%%/*}"
+      test "$API_REGISTRY" = "$WEB_REGISTRY"
+      aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$API_REGISTRY"
+      API_REPOSITORY="${ECR_API_REPOSITORY##*/}"
+      API_IMAGE="${ECR_API_REPOSITORY}:sha-${CI_COMMIT_SHA}"
+      if aws ecr describe-images --repository-name "$API_REPOSITORY" --image-ids "imageTag=sha-${CI_COMMIT_SHA}" >/dev/null 2>&1; then
+        echo "Reusing immutable API image sha-${CI_COMMIT_SHA}"
+      else
+        docker build -t "$API_IMAGE" ./api
+        docker push "$API_IMAGE"
+      fi
+      WEB_REPOSITORY="${ECR_WEB_REPOSITORY##*/}"
+      WEB_IMAGE="${ECR_WEB_REPOSITORY}:sha-${CI_COMMIT_SHA}"
+      if aws ecr describe-images --repository-name "$WEB_REPOSITORY" --image-ids "imageTag=sha-${CI_COMMIT_SHA}" >/dev/null 2>&1; then
+        echo "Reusing immutable web image sha-${CI_COMMIT_SHA}"
+      else
+        docker build -t "$WEB_IMAGE" ./web
+        docker push "$WEB_IMAGE"
+      fi
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       changes: [api/**/*, web/**/*, .gitlab-ci.yml]
@@ -121,6 +137,7 @@ ecr-publish:
 gitops-promote:
   stage: promote
   image: alpine:3.21
+  resource_group: showcaseme-gitops-promotion
   needs: ["ecr-publish"]
   before_script:
     - apk add --no-cache git
@@ -131,7 +148,9 @@ gitops-promote:
     - git remote set-url origin "https://oauth2:$GITOPS_PUSH_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git fetch origin "$CI_DEFAULT_BRANCH"
     - git checkout -B gitops-promotion FETCH_HEAD
+    - test "$(grep -Ec '^[[:space:]]+tag:' deploy/helm/showcaseme/values-aws.yaml)" -eq 2
     - sed -i -E "s|(^[[:space:]]+tag: ).*|\1sha-$CI_COMMIT_SHA|" deploy/helm/showcaseme/values-aws.yaml
+    - test "$(grep -c "tag: sha-$CI_COMMIT_SHA" deploy/helm/showcaseme/values-aws.yaml)" -eq 2
     - git add deploy/helm/showcaseme/values-aws.yaml
     - git diff --cached --quiet && exit 0
     - git commit -m "chore(gitops): promote sha-$CI_COMMIT_SHA"

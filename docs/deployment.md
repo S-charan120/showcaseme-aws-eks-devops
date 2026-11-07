@@ -78,12 +78,14 @@ Import or mirror this GitHub repository into GitLab at the project path set in `
 
 Set protected/masked CI variables:
 - `AWS_ROLE_ARN`: Terraform output `gitlab_ci_role_arn`.
-- `AWS_REGION`: Terraform region.
+- `AWS_REGION`: Terraform output `aws_region`.
+- `ECR_API_REPOSITORY`: Terraform output `ecr_api_repository_url`.
+- `ECR_WEB_REPOSITORY`: Terraform output `ecr_web_repository_url`.
 - `GITOPS_PUSH_TOKEN`: GitLab project access token with `write_repository` scope, used only for committing Helm image tags (not for AWS access).
 
 The pipeline uses an OIDC ID token with audience `sts.amazonaws.com`. Terraform trust is restricted to the configured GitLab project and default branch. Do not create long-lived AWS access keys.
 
-The first main-branch run validates code, builds API/web images, publishes SHA-tagged images to ECR, then commits those immutable image tags to `deploy/helm/showcaseme/values-aws.yaml`. Configure the GitLab push mirror to GitHub if you want these GitOps promotion commits reflected on the public GitHub repository. Ensure protected-branch settings permit the approved CI identity or change promotion to a merge-request workflow.
+The main-branch pipeline validates code, builds API/web images, and publishes SHA-tagged images to ECR. The publish job checks for an existing immutable SHA tag before building or pushing, so a retry reuses an image instead of trying to overwrite it. The GitOps promotion job is serialized and updates the two image tags in `deploy/helm/showcaseme/values-aws.yaml`. Configure the GitLab push mirror to GitHub if you want these GitOps promotion commits reflected on the public GitHub repository. Ensure protected-branch settings permit the approved CI identity or change promotion to a merge-request workflow.
 
 ## 6. Update AWS Helm values
 Update `deploy/helm/showcaseme/values-aws.yaml` placeholders with:
