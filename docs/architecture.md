@@ -36,7 +36,7 @@ flowchart TB
     CI -->|update Helm image tags| GL
     GL --> Argo[Argo CD]
     Argo -->|Helm render / reconcile| EKS[EKS cluster]
-    GH[GitHub source portfolio] -.->|optional push mirror| GL
+    GL -.->|optional push mirror| GH[GitHub source portfolio]
   end
 
   TF[Terraform] --> Network[VPC · subnets · routes · NAT]
