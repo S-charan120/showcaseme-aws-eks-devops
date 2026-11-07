@@ -29,7 +29,7 @@ The latest fully successful validation run:
 - API and web Docker images built.
 - Terraform formatting, initialization (without AWS backend) and validation passed.
 - Helm lint and both default/AWS values renders passed.
-- npm lockfiles and Terraform provider lockfile are committed. CI uses reproducible `npm ci` and does not auto-commit lockfile changes.
+- npm lockfiles and Terraform provider lockfile are committed. GitLab and GitHub validation use reproducible `npm ci`; workflows do not auto-commit dependency or Terraform lock changes.
 
 These checks validate source/configuration and image builds. They do not prove a live AWS deployment.
 
