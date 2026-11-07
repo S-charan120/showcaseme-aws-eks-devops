@@ -17,7 +17,7 @@
 
 1. Apply Terraform foundation and confirm VPC, EKS, node groups, RDS, S3 and IAM outputs.
 2. Configure cluster access and install/verify ingress, metrics and autoscaling components.
-3. Install Argo CD and register the GitOps source.
+3. Install Argo CD and register the GitOps source. Confirm the GitLab repository is accessible to Argo CD (public read or configured credentials) and its branch/path match the Application manifest.
 4. Run GitLab validation pipeline; confirm tests, Terraform validation, Helm lint/render and Docker builds pass.
 5. Configure GitLab OIDC variables; verify `aws sts get-caller-identity` resolves intended role.
 6. Publish API/web SHA images to ECR; verify digests.
