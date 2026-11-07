@@ -71,7 +71,16 @@ GitHub Actions is a separate repository-validation workflow. It does **not** dep
 .
 ├── api/                              # Express API, SQL migrations and tests
 ├── web/                              # React application and Nginx reverse proxy
-├── infra/terraform/                  # VPC, EKS, RDS, S3, ECR and IAM
+├── infra/terraform/                  # Terraform root module (one shared state/module)
+│   ├── main.tf                        # Data sources and shared locals
+│   ├── network.tf                     # VPC, subnets, routes and NAT
+│   ├── eks.tf                         # EKS cluster, nodes, add-ons and autoscaler tags
+│   ├── iam.tf                         # EKS, IRSA, controller and GitLab OIDC roles
+│   ├── database.tf                    # RDS PostgreSQL and Secrets Manager values
+│   ├── storage-ecr.tf                 # Private S3 bucket and immutable ECR repositories
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── versions.tf
 ├── deploy/
 │   ├── helm/showcaseme/              # Chart, AWS values and Kubernetes templates
 │   └── argocd/                       # Application, metrics-server and Cluster Autoscaler
