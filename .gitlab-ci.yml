@@ -86,7 +86,7 @@ container-build:
       changes: [api/**/*, web/**/*, .gitlab-ci.yml]
 
 # Create a GitLab OIDC id_token in the audience configured in Terraform.
-# Configure AWS_ROLE_ARN, AWS_REGION and a masked GITOPS_PUSH_TOKEN in GitLab CI/CD variables.
+# Configure AWS_ROLE_ARN, AWS_REGION, ECR_API_REPOSITORY, ECR_WEB_REPOSITORY and a masked GITOPS_PUSH_TOKEN.
 ecr-publish:
   stage: publish
   image: docker:27-cli
