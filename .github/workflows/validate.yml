@@ -154,9 +154,47 @@ jobs:
       - name: Lint chart
         run: helm lint deploy/helm/showcaseme
       - name: Render default chart
-        run: helm template showcaseme deploy/helm/showcaseme --namespace showcaseme
+        run: helm template showcaseme deploy/helm/showcaseme --namespace showcaseme > /tmp/showcaseme-default.yaml
       - name: Render AWS chart
-        run: helm template showcaseme deploy/helm/showcaseme --namespace showcaseme -f deploy/helm/showcaseme/values-aws.yaml
+        run: helm template showcaseme deploy/helm/showcaseme --namespace showcaseme -f deploy/helm/showcaseme/values-aws.yaml > /tmp/showcaseme-aws.yaml
+      - name: Validate HPA-managed replica mode
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for profile in ('default', 'aws'):
+              rendered = Path(f'/tmp/showcaseme-{profile}.yaml').read_text(encoding='utf-8')
+              documents = [doc for doc in rendered.split('---') if doc.strip()]
+              deployments = [doc for doc in documents if re.search(r'(?m)^kind: Deployment\s*$', doc)]
+              hpas = [doc for doc in documents if re.search(r'(?m)^kind: HorizontalPodAutoscaler\s*$', doc)]
+              assert len(deployments) == 2, f'{profile}: expected API and web Deployments'
+              assert len(hpas) == 2, f'{profile}: expected API and web HPAs'
+              assert all(not re.search(r'(?m)^  replicas:', doc) for doc in deployments), (
+                  f'{profile}: HPA-enabled Deployments must not declare spec.replicas'
+              )
+          print('Default and AWS values render with HPA-managed replicas.')
+          PY
+      - name: Validate fixed-replica mode
+        run: |
+          set -euo pipefail
+          helm template showcaseme deploy/helm/showcaseme --namespace showcaseme \
+            -f deploy/helm/showcaseme/values-aws.yaml \
+            --set api.autoscaling.enabled=false \
+            --set web.autoscaling.enabled=false > /tmp/showcaseme-fixed-replicas.yaml
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          rendered = Path('/tmp/showcaseme-fixed-replicas.yaml').read_text(encoding='utf-8')
+          documents = [doc for doc in rendered.split('---') if doc.strip()]
+          deployments = [doc for doc in documents if re.search(r'(?m)^kind: Deployment\s*$', doc)]
+          hpas = [doc for doc in documents if re.search(r'(?m)^kind: HorizontalPodAutoscaler\s*$', doc)]
+          assert len(deployments) == 2, 'fixed mode: expected API and web Deployments'
+          assert not hpas, 'fixed mode: HPAs must be disabled'
+          assert all(re.search(r'(?m)^  replicas: 2\s*$', doc) for doc in deployments), (
+              'fixed mode: both Deployment replicaCount defaults must render'
+          )
+          print('AWS values render with fixed replica counts when autoscaling is disabled.')
+          PY
 
   gitlab-config:
     runs-on: ubuntu-latest
