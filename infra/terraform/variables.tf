@@ -92,8 +92,3 @@ variable "db_backup_retention_days" {
   type    = number
   default = 1
 }
-
-variable "tags" {
-  type    = map(string)
-  default = {}
-}
