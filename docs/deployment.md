@@ -12,7 +12,7 @@ Use Terraform 1.6+ and AWS CLI. Configure an encrypted remote state backend with
 cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit cluster_admin_cidrs to your own current public IPv4 address /32.
-terraform fmt -recursive
+terraform fmt -check -recursive
 terraform init
 terraform validate
 terraform plan -out=tfplan
@@ -67,7 +67,7 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
   --set serviceAccount.create=true \
   --set serviceAccount.name=aws-load-balancer-controller \
   --set serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn="$(terraform output -raw alb_controller_role_arn)" \
-  --set region=ap-south-1 \
+  --set region="$(terraform output -raw aws_region)" \
   --set vpcId="$(terraform output -raw vpc_id)"
 ```
 
@@ -95,7 +95,7 @@ Update `deploy/helm/showcaseme/values-aws.yaml` placeholders with:
 For initial testing, keep ingress host empty to use the ALB DNS address. Note that an empty host creates a hostless Ingress rule; verify the AWS Load Balancer Controller provisions the ALB and its default routing as expected. The AWS Helm values now configure an HTTPS-only ALB listener (443) and redirect HTTP to HTTPS. Before applying, set `alb.ingress.kubernetes.io/certificate-arn` in `deploy/helm/showcaseme/values-aws.yaml` to an ACM certificate ARN in the same region as the ALB. Without that certificate annotation, ALB provisioning will fail; do not deploy publicly until DNS points to the ALB and the certificate is validated.
 
 ## 7. Install autoscaling components and sync Argo CD
-Apply the Argo CD Application manifests in `deploy/argocd`. Before applying `cluster-autoscaler.yaml`, replace the role ARN and cluster name using Terraform outputs. The configured chart is compatible with Kubernetes 1.35; keep Cluster Autoscaler minor version aligned with the cluster.
+Apply the Argo CD Application manifests in `deploy/argocd`. Before applying `cluster-autoscaler.yaml`, replace the role ARN, cluster name, and `awsRegion` with `cluster_autoscaler_role_arn`, `cluster_name`, and `aws_region` from Terraform outputs. The manifest defaults intentionally match `project_name = showcaseme`, `environment = dev`, and `aws_region = ap-south-1`; update all three when changing those Terraform inputs. The configured chart is compatible with Kubernetes 1.35; keep Cluster Autoscaler minor version aligned with the cluster.
 
 ```bash
 kubectl apply -f deploy/argocd/metrics-server.yaml

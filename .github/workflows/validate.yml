@@ -49,7 +49,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: api/package.json
+          cache-dependency-path: api/package-lock.json
       - name: Install from committed lockfile
         working-directory: api
         run: npm ci --no-audit --no-fund
@@ -119,7 +119,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package.json
+          cache-dependency-path: web/package-lock.json
       - name: Install from generated lockfile
         working-directory: web
         run: npm ci --no-audit --no-fund
@@ -136,7 +136,7 @@ jobs:
           terraform_version: 1.10.5
       - name: Format check
         working-directory: infra/terraform
-        run: terraform fmt -recursive && terraform fmt -check -recursive
+        run: terraform fmt -check -recursive
       - name: Initialize without cloud backend
         working-directory: infra/terraform
         run: terraform init -backend=false
