@@ -1,10 +1,6 @@
 nameOverride: ""
 fullnameOverride: ""
 
-global:
-  awsRegion: ap-south-1
-  s3Bucket: ""
-
 api:
   replicaCount: 2
   image:
