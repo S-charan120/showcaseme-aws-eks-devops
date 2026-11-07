@@ -39,4 +39,3 @@ The latest fully successful validation run:
 4. Verify EKS pods, HPA, Cluster Autoscaler, RDS private connectivity, S3 presigned upload and IRSA policy boundaries.
 5. Record comparable release durations before stating the 12-to-8-minute improvement.
 
-This repo is not labelled production-deployed until the external gates and runtime tests are completed.
