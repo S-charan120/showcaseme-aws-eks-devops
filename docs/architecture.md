@@ -38,7 +38,3 @@ flowchart TB
 - S3 blocks public access and uses encryption/versioning.
 - GitLab obtains short-lived AWS credentials through OIDC; API, Cluster Autoscaler and Load Balancer Controller use separate IRSA roles.
 - Kubernetes API access is restricted by the configured administrator CIDR. The example loopback CIDR is a safe placeholder, not an operator-ready value.
-
-## Validation and deployment evidence
-
-GitHub Actions validates application code, Terraform and Helm rendering. GitLab CI is the intended image publication/GitOps promotion workflow, but requires a configured GitLab project and AWS OIDC. Argo CD and EKS runtime health must be checked after provisioning; repository checks alone do not prove a live deployment.
