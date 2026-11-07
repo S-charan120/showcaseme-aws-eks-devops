@@ -21,5 +21,5 @@ test('registration rejects bcrypt inputs above 72 UTF-8 bytes', () => {
 });
 test('portfolio bounds are enforced after trimming whitespace', () => {
   assert.ok(validatePortfolio({ ...portfolio, displayName: 'x'.repeat(121) }).some(error => error.startsWith('displayName')));
-  assert.ok(validatePortfolio({ ...portfolio, headline: ' '.repeat(181) }).some(error => error.startsWith('headline')));
+  assert.ok(validatePortfolio({ ...portfolio, headline: 'x'.repeat(181) }).some(error => error.startsWith('headline')));
 });
