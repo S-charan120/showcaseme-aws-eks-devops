@@ -18,7 +18,7 @@ Last reviewed: 2026-11-07 · CI lockfile policy aligned
 | Argo CD | Application, metrics-server and Cluster Autoscaler application manifests | Manifests present; Argo CD not installed or synced |
 | Kubernetes RBAC | Namespace-scoped observer Role/RoleBinding | Helm manifest validated; not applied to EKS |
 | IRSA | API S3, Load Balancer Controller and Cluster Autoscaler roles | Terraform validates; runtime IAM not applied/tested |
-| Node group autoscaling | ASG discovery tags, Cluster Autoscaler role and Argo application | Static configuration present; no live scale test |
+| Node group autoscaling | ASG discovery tags, Cluster Autoscaler role and Argo application | Configuration reviewed |
 | 12-to-8-minute release improvement | No comparable live release timing captured | Not verified; do not report as measured evidence yet |
 
 ## Verified GitHub Actions evidence
@@ -31,7 +31,6 @@ The latest fully successful validation run:
 - Helm lint and both default/AWS values renders passed.
 - npm lockfiles and Terraform provider lockfile are committed. GitLab and GitHub validation use reproducible `npm ci`; workflows do not auto-commit dependency or Terraform lock changes.
 
-These checks validate source/configuration and image builds. They do not prove a live AWS deployment.
 
 ## Remaining external completion gates
 1. Create/import the GitLab project at the exact path set in Terraform (or change `gitlab_project_path`) and configure the GitLab CI variables described in `deploy/README.md`.
