@@ -1,6 +1,6 @@
 # Implementation status
 
-Last reviewed: 2026-11-07
+Last reviewed: 2026-11-07 · CI lockfile policy aligned
 
 ## AWS v14 resume-alignment matrix
 
