@@ -149,6 +149,7 @@ gitops-promote:
     - git config user.email "showcaseme-ci@example.invalid"
     - git remote set-url origin "https://oauth2:$GITOPS_PUSH_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git fetch origin "$CI_DEFAULT_BRANCH"
+    - test "$(git rev-parse FETCH_HEAD)" = "$CI_COMMIT_SHA" || { echo "Pipeline commit is no longer the default-branch HEAD; skipping stale GitOps promotion."; exit 0; }
     - git checkout -B gitops-promotion FETCH_HEAD
     - test "$(grep -Ec '^[[:space:]]+tag:' deploy/helm/showcaseme/values-aws.yaml)" -eq 2
     - sed -i -E "s|(^[[:space:]]+tag: ).*|\1sha-$CI_COMMIT_SHA|" deploy/helm/showcaseme/values-aws.yaml
