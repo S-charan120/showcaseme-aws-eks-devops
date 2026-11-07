@@ -1,6 +1,6 @@
 # Implementation status
 
-Last reviewed: 2026-11-06
+Last reviewed: 2026-11-07
 
 ## AWS v14 resume-alignment matrix
 
@@ -29,7 +29,7 @@ The latest fully successful validation run:
 - API and web Docker images built.
 - Terraform formatting, initialization (without AWS backend) and validation passed.
 - Helm lint and both default/AWS values renders passed.
-- npm lockfiles and Terraform provider lockfile are committed.
+- npm lockfiles and Terraform provider lockfile are committed. CI uses reproducible `npm ci` and does not auto-commit lockfile changes.
 
 These checks validate source/configuration and image builds. They do not prove a live AWS deployment.
 
