@@ -71,7 +71,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-The GitHub Actions validation workflow is a reproducible repository check (API integration tests, frontend build, Terraform validation and Helm rendering). It does **not** deploy AWS infrastructure.
+The GitHub Actions validation workflow is a reproducible repository check (API/PostgreSQL integration tests, frontend build, Terraform validation and Helm rendering). GitLab CI installs committed npm lockfiles with `npm ci`; CI does not rewrite dependency locks. It does **not** deploy AWS infrastructure.
 
 ## AWS setup
 
