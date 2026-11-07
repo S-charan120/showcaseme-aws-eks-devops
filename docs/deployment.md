@@ -85,11 +85,12 @@ Set protected/masked CI variables:
 
 The pipeline uses an OIDC ID token with audience `sts.amazonaws.com`. Terraform trust is restricted to the configured GitLab project and default branch. Do not create long-lived AWS access keys.
 
-The main-branch pipeline validates code, builds API/web images, and publishes SHA-tagged images to ECR. The publish job checks for an existing immutable SHA tag before building or pushing, so a retry reuses an image instead of trying to overwrite it. The GitOps promotion job is serialized and updates the two image tags in `deploy/helm/showcaseme/values-aws.yaml`. Configure the GitLab push mirror to GitHub if you want these GitOps promotion commits reflected on the public GitHub repository. Ensure protected-branch settings permit the approved CI identity or change promotion to a merge-request workflow.
+The main-branch pipeline validates code, builds API/web images, and publishes SHA-tagged images to ECR. The publish job is serialized and checks for an existing immutable SHA tag before building or pushing, so a retry reuses an image instead of trying to overwrite it. The GitOps promotion job is also serialized and updates the two image tags in `deploy/helm/showcaseme/values-aws.yaml`. Configure the GitLab push mirror to GitHub if you want these GitOps promotion commits reflected on the public GitHub repository. Ensure protected-branch settings permit the approved CI identity or change promotion to a merge-request workflow.
 
 ## 6. Update AWS Helm values
 Update `deploy/helm/showcaseme/values-aws.yaml` placeholders with:
 - ECR API and web repository URLs from Terraform outputs.
+- `api.env.AWS_REGION` from Terraform output `aws_region`.
 - `app_irsa_role_arn`.
 - `s3_assets_bucket`.
 - A DNS host only after domain/HTTPS configuration is completed.

@@ -89,6 +89,7 @@ container-build:
 # Configure AWS_ROLE_ARN, AWS_REGION, ECR_API_REPOSITORY, ECR_WEB_REPOSITORY and a masked GITOPS_PUSH_TOKEN.
 ecr-publish:
   stage: publish
+  resource_group: showcaseme-ecr-publish
   image: docker:27-cli
   services:
     - name: docker:27-dind

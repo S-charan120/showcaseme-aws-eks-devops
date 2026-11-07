@@ -216,8 +216,9 @@ jobs:
               assert job in config, f"missing GitLab job: {job}"
           publish_script = "\n".join(config["ecr-publish"]["script"])
           assert "aws ecr describe-images" in publish_script, "ECR publish must reuse immutable SHA tags on retry"
+          assert config["ecr-publish"]["resource_group"] == "showcaseme-ecr-publish", "ECR publication must be serialized"
           assert config["gitops-promote"]["resource_group"] == "showcaseme-gitops-promotion", "GitOps promotion must be serialized"
-          print("GitLab CI YAML parses; required jobs, immutable-tag retry safety and serialized promotion are present.")
+          print("GitLab CI YAML parses; required jobs, immutable-tag retry safety, serialized ECR publication and serialized promotion are present.")
           PY
 
   containers:
