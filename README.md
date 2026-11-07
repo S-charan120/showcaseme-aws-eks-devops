@@ -45,7 +45,7 @@ flowchart TB
     CI -->|commit image tags| GL
     GL --> Argo[Argo CD]
     Argo -->|Helm sync / reconcile| EKS[EKS cluster]
-    GitHub[GitHub portfolio mirror] -.->|optional GitLab push mirror| GL
+    GL -.->|optional GitLab push mirror| GitHub[GitHub portfolio mirror]
   end
 
   TF[Terraform] --> AWS[AWS VPC · EKS · IAM · RDS · S3 · ECR]
