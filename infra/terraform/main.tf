@@ -4,8 +4,6 @@ data "aws_availability_zones" "available" {
 
 data "aws_caller_identity" "current" {}
 
-data "aws_region" "current" {}
-
 data "tls_certificate" "gitlab" {
   url = "https://gitlab.com"
 }
