@@ -1,7 +1,3 @@
-global:
-  awsRegion: ap-south-1
-  s3Bucket: REPLACE_WITH_TERRAFORM_OUTPUT
-
 api:
   image:
     repository: ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/showcaseme-api
