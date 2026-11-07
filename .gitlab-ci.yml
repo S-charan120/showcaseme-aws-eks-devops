@@ -101,6 +101,7 @@ ecr-publish:
     AWS_ID_TOKEN:
       aud: sts.amazonaws.com
   script:
+    - test -n "$GITOPS_PUSH_TOKEN" || { echo "GITOPS_PUSH_TOKEN is required before publishing images." >&2; exit 1; }
     - apk add --no-cache aws-cli
     - test -n "$AWS_ROLE_ARN" && test -n "$AWS_REGION"
     - test -n "$ECR_API_REPOSITORY" && test -n "$ECR_WEB_REPOSITORY"
