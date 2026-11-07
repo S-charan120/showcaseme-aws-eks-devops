@@ -43,7 +43,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: api/package.json
-      - name: Install from generated lockfile
+      - name: Install from committed lockfile
         working-directory: api
         run: npm ci --no-audit --no-fund
       - name: Test and syntax checks
@@ -103,12 +103,6 @@ jobs:
           LOGIN_TOKEN="$(curl -fsS -X POST http://localhost:8081/api/auth/login -H 'Content-Type: application/json' -d "$LOGIN" | jq -r .accessToken)"
           curl -fsS http://localhost:8081/api/me -H "Authorization: Bearer $LOGIN_TOKEN" | jq -e '.email == "'"$EMAIL"'"' >/dev/null
           echo "Register/login, portfolio CRUD, publish/unpublish and public read checks passed."
-      - name: Upload API lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: showcaseme-api-lockfile
-          path: api/package-lock.json
-          retention-days: 7
 
   web:
     runs-on: ubuntu-latest
@@ -125,12 +119,6 @@ jobs:
       - name: Build React frontend
         working-directory: web
         run: npm run build
-      - name: Upload web lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: showcaseme-web-lockfile
-          path: web/package-lock.json
-          retention-days: 7
 
   terraform:
     runs-on: ubuntu-latest
