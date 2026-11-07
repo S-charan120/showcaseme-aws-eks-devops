@@ -277,15 +277,15 @@ resource "aws_ecr_lifecycle_policy" "web" {
 # -------------------- Database: encrypted PostgreSQL in private subnets --------------------
 resource "aws_security_group" "rds" {
   name        = "${local.name}-rds-sg"
-  description = "PostgreSQL reachable only from EKS worker nodes"
+  description = "PostgreSQL reachable only from the EKS cluster security group"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "PostgreSQL from EKS worker nodes"
+    description     = "PostgreSQL from EKS managed nodes (cluster security group)"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [aws_security_group.nodes.id]
+    security_groups = [aws_eks_cluster.main.vpc_config[0].cluster_security_group_id]
   }
 
   egress {
