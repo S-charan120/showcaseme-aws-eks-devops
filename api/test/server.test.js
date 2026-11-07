@@ -34,3 +34,11 @@ test('readiness accurately reflects database availability', async t => {
     }
   });
 });
+
+test('malformed JSON is rejected with a client error', async t => {
+  await withServer(t, async base => {
+    const response = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{invalid' });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: 'invalid JSON' });
+  });
+});
