@@ -92,7 +92,7 @@ Update `deploy/helm/showcaseme/values-aws.yaml` placeholders with:
 - `s3_assets_bucket`.
 - A DNS host only after domain/HTTPS configuration is completed.
 
-For initial testing, keep ingress host empty to use the ALB DNS address. The current sample ingress uses HTTP only. For a real domain, configure ACM certificate, HTTPS listener and HTTP-to-HTTPS redirect before using it for production.
+For initial testing, keep ingress host empty to use the ALB DNS address. Note that an empty host creates a hostless Ingress rule; verify the AWS Load Balancer Controller provisions the ALB and its default routing as expected. The current sample ingress uses HTTP only. For a real domain, configure ACM certificate, HTTPS listener and HTTP-to-HTTPS redirect before using it for production.
 
 ## 7. Install autoscaling components and sync Argo CD
 Apply the Argo CD Application manifests in `deploy/argocd`. Before applying `cluster-autoscaler.yaml`, replace the role ARN and cluster name using Terraform outputs. The configured chart is compatible with Kubernetes 1.35; keep Cluster Autoscaler minor version aligned with the cluster.
