@@ -58,7 +58,7 @@ flowchart TB
 
 1. Change application, infrastructure or Helm source in the GitLab project (import or mirror this GitHub repository there first).
 2. GitLab merge-request pipelines validate API tests, frontend build, Terraform, Helm and container builds.
-3. On the default branch, GitLab CI obtains short-lived AWS credentials through OIDC and publishes API/web images to ECR using `sha-$CI_COMMIT_SHA` tags.
+3. On the default branch, GitLab CI first requires `GITOPS_PUSH_TOKEN`; if it is absent, the publish job fails before AWS authentication or ECR writes. With the token present, CI obtains short-lived AWS credentials through OIDC and publishes API/web images to ECR using `sha-$CI_COMMIT_SHA` tags.
 4. The promotion job commits both image tags to `deploy/helm/showcaseme/values-aws.yaml` in GitLab.
 5. Argo CD watches that GitLab branch/path and reconciles the Helm release to EKS. GitLab CI does not run `kubectl apply` or `helm upgrade` against the application.
 6. Verify the rollout, ingress, readiness, logs, RDS and S3 access. Roll back by reverting the GitOps image-promotion commit.

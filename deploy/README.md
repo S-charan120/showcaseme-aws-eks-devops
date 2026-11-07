@@ -22,7 +22,7 @@ Set these in GitLab > Settings > CI/CD > Variables. Keep the AWS values protecte
 
 The GitLab OIDC ID token audience is `sts.amazonaws.com`. Terraform restricts the trust policy to the configured GitLab project path, branch and audience. The ECR variables must contain full repository URLs (registry/account and repository name), not only repository names.
 
-The publish job serializes ECR publication and checks whether each immutable `sha-$CI_COMMIT_SHA` tag already exists before pushing. The GitOps promotion job serializes edits to the Helm values file. For a protected default branch, configure the approved CI identity to push or change the promotion design to a merge-request workflow.
+The publish job checks `GITOPS_PUSH_TOKEN` before AWS authentication or any ECR operation. If the token is missing, image publication fails immediately instead of leaving unpromoted images behind or reporting a successful release. With the token present, the job serializes ECR publication and checks whether each immutable `sha-$CI_COMMIT_SHA` tag already exists before pushing. The GitOps promotion job serializes edits to the Helm values file. For a protected default branch, configure the approved CI identity to push or change the promotion design to a merge-request workflow.
 
 ## Terraform output values and controller setup
 

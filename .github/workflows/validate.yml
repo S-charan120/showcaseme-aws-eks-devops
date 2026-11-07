@@ -215,6 +215,14 @@ jobs:
           for job in ("api-test", "web-build", "terraform-validate", "helm-validate", "container-build", "ecr-publish", "gitops-promote"):
               assert job in config, f"missing GitLab job: {job}"
           publish_script = "\n".join(config["ecr-publish"]["script"])
+          token_preflight = 'test -n "$GITOPS_PUSH_TOKEN"'
+          assert token_preflight in publish_script, "ECR publish must require the GitOps token before starting"
+          assert publish_script.index(token_preflight) < publish_script.index("aws sts get-caller-identity"), (
+              "GitOps token preflight must run before AWS authentication"
+          )
+          assert publish_script.index(token_preflight) < publish_script.index("aws ecr get-login-password"), (
+              "GitOps token preflight must run before ECR access or publication"
+          )
           assert "aws ecr describe-images" in publish_script, "ECR publish must reuse immutable SHA tags on retry"
           assert config["ecr-publish"]["resource_group"] == "showcaseme-ecr-publish", "ECR publication must be serialized"
           assert config["gitops-promote"]["resource_group"] == "showcaseme-gitops-promotion", "GitOps promotion must be serialized"
