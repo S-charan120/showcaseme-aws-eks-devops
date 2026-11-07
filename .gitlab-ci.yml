@@ -37,7 +37,7 @@ web-build:
   image: node:22-alpine
   script:
     - cd web
-    - npm install --no-audit --no-fund
+    - npm ci --no-audit --no-fund
     - npm run build
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
