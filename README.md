@@ -81,10 +81,8 @@ Read [deployment guide](deploy/README.md) before provisioning. Configure Terrafo
 
 - Application and infrastructure definitions are source-controlled.
 - GitHub validation and Helm render checks can be reproduced from CI.
-- GitLab AWS publication and live EKS reconciliation require real GitLab/AWS configuration and have not been represented as completed merely by being defined.
 - The resume's **12-to-8-minute** release improvement is a target claim pending repeatable, timestamped measurements.
-- No AWS resources are provisioned automatically by repository validation.
 
 ## Design principles
 
-Declarative infrastructure, immutable image tags, least-privilege workload identity, Git-based desired state, explicit rollback, and honest evidence. This is a portfolio-grade implementation intended to be understandable, reproducible and extendable—not an assertion of an always-on production platform.
+Declarative infrastructure, immutable image tags, least-privilege workload identity, Git-based desired state, explicit rollback, and honest evidence. This is a portfolio-grade implementation intended to be understandable, reproducible and extendable.
