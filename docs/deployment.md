@@ -92,6 +92,8 @@ Update `deploy/helm/showcaseme/values-aws.yaml` placeholders with:
 - `s3_assets_bucket`.
 - A DNS host only after domain/HTTPS configuration is completed.
 
+The Helm chart supports two mutually exclusive scaling modes: with API/web autoscaling enabled (the default), the Horizontal Pod Autoscalers own replica counts and Deployments omit `spec.replicas`; with autoscaling disabled, `api.replicaCount` and `web.replicaCount` set fixed Deployment replica counts. CI renders and checks both modes.
+
 For initial testing, keep ingress host empty to use the ALB DNS address. Note that an empty host creates a hostless Ingress rule; verify the AWS Load Balancer Controller provisions the ALB and its default routing as expected. The AWS Helm values now configure an HTTPS-only ALB listener (443) and redirect HTTP to HTTPS. Before applying, set `alb.ingress.kubernetes.io/certificate-arn` in `deploy/helm/showcaseme/values-aws.yaml` to an ACM certificate ARN in the same region as the ALB. Without that certificate annotation, ALB provisioning will fail; do not deploy publicly until DNS points to the ALB and the certificate is validated.
 
 ## 7. Install autoscaling components and sync Argo CD
